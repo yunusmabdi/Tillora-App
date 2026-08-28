@@ -18,11 +18,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 
 import com.example.Tillora.components.CartItem
+import com.example.Tillora.models.Order
 import com.example.Tillora.models.Product
 import com.example.Tillora.screens.AccountScreen
 import com.example.Tillora.screens.CartScreen
 import com.example.Tillora.screens.EditProfileScreen
 import com.example.Tillora.screens.HomeScreen
+import com.example.Tillora.screens.OrderTrackingScreen
 import com.example.Tillora.screens.OrdersScreen
 import com.example.Tillora.viewmodel.AuthViewModel
 
@@ -31,7 +33,8 @@ private enum class AppScreen {
     CART,
     ORDERS,
     ACCOUNT,
-    EDIT_PROFILE
+    EDIT_PROFILE,
+    ORDER_TRACKING
 }
 
 @Composable
@@ -55,6 +58,14 @@ fun AppNavigation(
 
     var currentScreen by remember {
         mutableStateOf(AppScreen.HOME)
+    }
+
+    // =========================================================
+    // SELECTED ORDER
+    // =========================================================
+
+    var selectedOrder by remember {
+        mutableStateOf<Order?>(null)
     }
 
     // =========================================================
@@ -83,6 +94,31 @@ fun AppNavigation(
         } else {
 
             currentScreen = AppScreen.ACCOUNT
+        }
+
+        return
+    }
+
+    // =========================================================
+    // ORDER TRACKING
+    // =========================================================
+
+    if (currentScreen == AppScreen.ORDER_TRACKING) {
+
+        if (selectedOrder != null) {
+
+            OrderTrackingScreen(
+                order = selectedOrder!!,
+
+                onBackClick = {
+                    selectedOrder = null
+                    currentScreen = AppScreen.ORDERS
+                }
+            )
+
+        } else {
+
+            currentScreen = AppScreen.ORDERS
         }
 
         return
@@ -240,7 +276,14 @@ fun AppNavigation(
 
             AppScreen.ORDERS -> {
 
-                OrdersScreen()
+                OrdersScreen(
+                    onOrderClick = { order ->
+
+                        selectedOrder = order
+
+                        currentScreen = AppScreen.ORDER_TRACKING
+                    }
+                )
             }
 
             // =====================================================
@@ -279,6 +322,14 @@ fun AppNavigation(
             // =====================================================
 
             AppScreen.EDIT_PROFILE -> {
+                // Handled above before Scaffold.
+            }
+
+            // =====================================================
+            // ORDER TRACKING
+            // =====================================================
+
+            AppScreen.ORDER_TRACKING -> {
                 // Handled above before Scaffold.
             }
         }
