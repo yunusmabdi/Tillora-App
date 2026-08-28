@@ -1,22 +1,25 @@
 package com.example.Tillora.api
 
+import com.example.Tillora.models.AuthResponse
 import com.example.Tillora.models.Category
 import com.example.Tillora.models.LoginRequest
 import com.example.Tillora.models.MeResponse
+import com.example.Tillora.models.OrderResponse
 import com.example.Tillora.models.Product
 import com.example.Tillora.models.RegisterEmailRequest
 import com.example.Tillora.models.ResendOtpRequest
 import com.example.Tillora.models.SendOtpRequest
 import com.example.Tillora.models.SendOtpResponse
+import com.example.Tillora.models.SingleOrderResponse
+import com.example.Tillora.models.UpdateProfileRequest
 import com.example.Tillora.models.VerifyOtpRequest
 import com.example.Tillora.models.VerifyOtpResponse
-import com.example.Tillora.models.AuthResponse
-import com.example.Tillora.models.UpdateProfileRequest
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
-
+import retrofit2.http.Path
+import com.example.Tillora.models.Order
 data class ProductsResponse(
     val success: Boolean,
     val products: List<Product>
@@ -29,22 +32,26 @@ data class CategoriesResponse(
 
 interface TilloraApi {
 
-    // =====================================================
-    // PRODUCTS
-    // =====================================================
-
     @GET("api/products")
     suspend fun getProducts(): ProductsResponse
-
-    // =====================================================
-    // CATEGORIES
-    // =====================================================
 
     @GET("api/categories")
     suspend fun getCategories(): CategoriesResponse
 
     // =====================================================
-    // CUSTOMER AUTHENTICATION
+    // ORDERS
+    // =====================================================
+
+    @GET("api/customer/orders")
+    suspend fun getOrders(): OrderResponse
+
+    @GET("api/customer/orders/{id}")
+    suspend fun getOrder(
+        @Path("id") id: Int
+    ): SingleOrderResponse
+
+    // =====================================================
+    // AUTHENTICATION
     // =====================================================
 
     @POST("api/customer/send-otp")
@@ -73,7 +80,7 @@ interface TilloraApi {
     ): AuthResponse
 
     // =====================================================
-    // CUSTOMER PROFILE
+    // PROFILE
     // =====================================================
 
     @GET("api/customer/me")

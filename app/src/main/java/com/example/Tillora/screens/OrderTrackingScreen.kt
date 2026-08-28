@@ -24,9 +24,9 @@ import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,10 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.Tillora.models.Order
-import com.example.Tillora.ui.theme.StatusCancelled
-import com.example.Tillora.ui.theme.StatusDelivered
-import com.example.Tillora.ui.theme.StatusProcessing
-import com.example.Tillora.ui.theme.StatusShipped
+import com.example.Tillora.models.OrderItem
 import com.example.Tillora.ui.theme.TilloraBackground
 import com.example.Tillora.ui.theme.TilloraBorder
 import com.example.Tillora.ui.theme.TilloraNavy
@@ -85,9 +82,7 @@ fun OrderTrackingScreen(
             }
 
             Column(
-                modifier = Modifier.padding(
-                    start = 4.dp
-                )
+                modifier = Modifier.padding(start = 4.dp)
             ) {
 
                 Text(
@@ -127,8 +122,20 @@ fun OrderTrackingScreen(
             // =================================================
 
             item {
-
                 OrderHeader(order)
+            }
+
+            // =================================================
+            // DELIVERY ADDRESS
+            // =================================================
+
+            if (!order.deliveryAddress.isNullOrBlank()) {
+
+                item {
+                    DeliveryCard(
+                        address = order.deliveryAddress
+                    )
+                }
             }
 
             // =================================================
@@ -136,14 +143,13 @@ fun OrderTrackingScreen(
             // =================================================
 
             item {
-
                 TrackingCard(
                     status = order.status
                 )
             }
 
             // =================================================
-            // ITEMS TITLE
+            // ORDER ITEMS TITLE
             // =================================================
 
             item {
@@ -157,7 +163,7 @@ fun OrderTrackingScreen(
             }
 
             // =================================================
-            // ITEMS
+            // ORDER ITEMS
             // =================================================
 
             items(
@@ -175,10 +181,7 @@ fun OrderTrackingScreen(
             // =================================================
 
             item {
-
-                OrderSummary(
-                    order = order
-                )
+                OrderSummary(order)
             }
 
             // =================================================
@@ -186,10 +189,22 @@ fun OrderTrackingScreen(
             // =================================================
 
             item {
-
                 PaymentCard(
-                    paymentMethod = order.paymentMethod
+                    order = order
                 )
+            }
+
+            // =================================================
+            // NOTES
+            // =================================================
+
+            if (!order.notes.isNullOrBlank()) {
+
+                item {
+                    NotesCard(
+                        notes = order.notes
+                    )
+                }
             }
         }
     }
@@ -207,9 +222,7 @@ private fun OrderHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(
-                RoundedCornerShape(16.dp)
-            )
+            .clip(RoundedCornerShape(18.dp))
             .background(TilloraNavy)
             .padding(20.dp)
     ) {
@@ -232,7 +245,7 @@ private fun OrderHeader(
         )
 
         Spacer(
-            modifier = Modifier.height(18.dp)
+            modifier = Modifier.height(20.dp)
         )
 
         Text(
@@ -251,6 +264,69 @@ private fun OrderHeader(
             fontWeight = FontWeight.Bold,
             color = Color.White
         )
+    }
+}
+
+// =============================================================
+// DELIVERY CARD
+// =============================================================
+
+@Composable
+private fun DeliveryCard(
+    address: String
+) {
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .padding(20.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(
+                    TilloraNavy.copy(alpha = 0.10f)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = null,
+                tint = TilloraNavy
+            )
+        }
+
+        Spacer(
+            modifier = Modifier.size(14.dp)
+        )
+
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+
+            Text(
+                text = "Delivery Address",
+                style = MaterialTheme.typography.bodySmall,
+                color = TilloraTextSecondary
+            )
+
+            Spacer(
+                modifier = Modifier.height(4.dp)
+            )
+
+            Text(
+                text = address,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = TilloraTextPrimary
+            )
+        }
     }
 }
 
@@ -284,7 +360,8 @@ private fun TrackingCard(
 
         "shipped" -> 3
 
-        "delivered" -> 4
+        "delivered",
+        "completed" -> 4
 
         else -> 0
     }
@@ -292,9 +369,7 @@ private fun TrackingCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(
-                RoundedCornerShape(16.dp)
-            )
+            .clip(RoundedCornerShape(18.dp))
             .background(Color.White)
             .padding(20.dp)
     ) {
@@ -349,10 +424,10 @@ private fun TrackingStep(
                     .size(32.dp)
                     .clip(CircleShape)
                     .background(
-                        when {
-                            isCurrent -> TilloraNavy
-                            isCompleted -> TilloraNavy
-                            else -> TilloraBorder
+                        if (isCompleted) {
+                            TilloraNavy
+                        } else {
+                            TilloraBorder
                         }
                     ),
                 contentAlignment = Alignment.Center
@@ -393,9 +468,7 @@ private fun TrackingStep(
         )
 
         Column(
-            modifier = Modifier.padding(
-                top = 5.dp
-            )
+            modifier = Modifier.padding(top = 5.dp)
         ) {
 
             Text(
@@ -431,15 +504,13 @@ private fun TrackingStep(
 
 @Composable
 private fun OrderItemRow(
-    item: com.example.Tillora.models.OrderItem
+    item: OrderItem
 ) {
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(
-                RoundedCornerShape(14.dp)
-            )
+            .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -448,9 +519,7 @@ private fun OrderItemRow(
         Box(
             modifier = Modifier
                 .size(60.dp)
-                .clip(
-                    RoundedCornerShape(10.dp)
-                )
+                .clip(RoundedCornerShape(10.dp))
                 .background(TilloraBackground),
             contentAlignment = Alignment.Center
         ) {
@@ -487,6 +556,16 @@ private fun OrderItemRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = TilloraTextSecondary
             )
+
+            Spacer(
+                modifier = Modifier.height(2.dp)
+            )
+
+            Text(
+                text = formatCurrency(item.unitPrice),
+                style = MaterialTheme.typography.bodySmall,
+                color = TilloraTextSecondary
+            )
         }
 
         Text(
@@ -510,9 +589,7 @@ private fun OrderSummary(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(
-                RoundedCornerShape(16.dp)
-            )
+            .clip(RoundedCornerShape(16.dp))
             .background(Color.White)
             .padding(20.dp)
     ) {
@@ -533,15 +610,26 @@ private fun OrderSummary(
             value = formatCurrency(order.subtotal)
         )
 
-        SummaryRow(
-            label = "Discount",
-            value = "- ${formatCurrency(order.discountAmount)}"
-        )
+        if (order.discountAmount > 0) {
+
+            SummaryRow(
+                label = "Discount",
+                value = "- ${formatCurrency(order.discountAmount)}"
+            )
+        }
 
         SummaryRow(
             label = "Tax",
             value = formatCurrency(order.tax)
         )
+
+        if (order.deliveryFee > 0) {
+
+            SummaryRow(
+                label = "Delivery Fee",
+                value = formatCurrency(order.deliveryFee)
+            )
+        }
 
         Spacer(
             modifier = Modifier.height(12.dp)
@@ -565,12 +653,14 @@ private fun OrderSummary(
 
             Text(
                 text = "Total",
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = TilloraTextPrimary
             )
 
             Text(
                 text = formatCurrency(order.totalAmount),
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = TilloraNavy
             )
@@ -615,15 +705,13 @@ private fun SummaryRow(
 
 @Composable
 private fun PaymentCard(
-    paymentMethod: String?
+    order: Order
 ) {
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(
-                RoundedCornerShape(16.dp)
-            )
+            .clip(RoundedCornerShape(16.dp))
             .background(Color.White)
             .padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -633,7 +721,9 @@ private fun PaymentCard(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(TilloraNavy.copy(alpha = 0.10f)),
+                .background(
+                    TilloraNavy.copy(alpha = 0.10f)
+                ),
             contentAlignment = Alignment.Center
         ) {
 
@@ -648,7 +738,9 @@ private fun PaymentCard(
             modifier = Modifier.size(14.dp)
         )
 
-        Column {
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
 
             Text(
                 text = "Payment Method",
@@ -661,12 +753,58 @@ private fun PaymentCard(
             )
 
             Text(
-                text = paymentMethod ?: "Not specified",
+                text = order.paymentMethod ?: "Not specified",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = TilloraTextPrimary
             )
+
+            Spacer(
+                modifier = Modifier.height(6.dp)
+            )
+
+            Text(
+                text = "Paid: ${formatCurrency(order.amountPaid)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = TilloraTextSecondary
+            )
         }
+    }
+}
+
+// =============================================================
+// NOTES CARD
+// =============================================================
+
+@Composable
+private fun NotesCard(
+    notes: String
+) {
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .padding(20.dp)
+    ) {
+
+        Text(
+            text = "Order Notes",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TilloraTextPrimary
+        )
+
+        Spacer(
+            modifier = Modifier.height(8.dp)
+        )
+
+        Text(
+            text = notes,
+            style = MaterialTheme.typography.bodyMedium,
+            color = TilloraTextSecondary
+        )
     }
 }
 
