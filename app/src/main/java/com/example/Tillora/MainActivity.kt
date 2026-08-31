@@ -125,8 +125,17 @@ fun TilloraApp() {
         "welcome" -> {
 
             WelcomeScreen(
+
                 onLoginClick = {
                     currentScreen = "login"
+                },
+
+                onDemoClick = {
+
+                    authViewModel.demoLogin {
+
+                        currentScreen = "main"
+                    }
                 }
             )
         }

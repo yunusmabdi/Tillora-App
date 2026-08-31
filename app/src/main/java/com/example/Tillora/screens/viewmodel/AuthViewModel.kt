@@ -383,6 +383,56 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
+    // =====================================================
+// DEMO LOGIN
+// =====================================================
+
+    fun demoLogin(
+        onSuccess: () -> Unit
+    ) {
+
+        viewModelScope.launch {
+
+            _isLoading.value = true
+            _error.value = null
+
+            try {
+
+                // Temporary demo account
+                val demoEmail = "kelvingitau268@gmail.com"
+                val demoPassword = "password"
+
+                val response = repository.login(
+                    email = demoEmail,
+                    password = demoPassword
+                )
+
+                response.token?.let { newToken ->
+
+                    tokenManager?.saveToken(newToken)
+
+                    _token.value = newToken
+                    _isLoggedIn.value = true
+                }
+
+                _customer.value = response.customer
+
+                onSuccess()
+
+            } catch (e: Exception) {
+
+                e.printStackTrace()
+
+                _error.value =
+                    e.message
+                        ?: "Demo login failed."
+
+            } finally {
+
+                _isLoading.value = false
+            }
+        }
+    }
 
     // =====================================================
     // LOAD CURRENT CUSTOMER

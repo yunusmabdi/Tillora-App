@@ -4,6 +4,7 @@ import com.example.Tillora.models.AuthResponse
 import com.example.Tillora.models.Category
 import com.example.Tillora.models.LoginRequest
 import com.example.Tillora.models.MeResponse
+import com.example.Tillora.models.Order
 import com.example.Tillora.models.OrderResponse
 import com.example.Tillora.models.Product
 import com.example.Tillora.models.RegisterEmailRequest
@@ -19,7 +20,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
-import com.example.Tillora.models.Order
+
 data class ProductsResponse(
     val success: Boolean,
     val products: List<Product>
@@ -32,8 +33,16 @@ data class CategoriesResponse(
 
 interface TilloraApi {
 
+    // =====================================================
+    // PRODUCTS
+    // =====================================================
+
     @GET("api/products")
     suspend fun getProducts(): ProductsResponse
+
+    // =====================================================
+    // CATEGORIES
+    // =====================================================
 
     @GET("api/categories")
     suspend fun getCategories(): CategoriesResponse
@@ -42,10 +51,10 @@ interface TilloraApi {
     // ORDERS
     // =====================================================
 
-    @GET("api/customer/orders")
+    @GET("api/orders")
     suspend fun getOrders(): OrderResponse
 
-    @GET("api/customer/orders/{id}")
+    @GET("api/orders/{id}")
     suspend fun getOrder(
         @Path("id") id: Int
     ): SingleOrderResponse

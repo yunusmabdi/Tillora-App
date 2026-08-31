@@ -37,7 +37,8 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun WelcomeScreen(
-    onLoginClick: () -> Unit
+    onLoginClick: () -> Unit,
+    onDemoClick: () -> Unit
 ) {
 
     val images = listOf(
@@ -144,7 +145,7 @@ fun WelcomeScreen(
         }
 
         // -------------------------------------------------
-        // LARGE RECTANGULAR IMAGE CAROUSEL
+        // IMAGE CAROUSEL
         // -------------------------------------------------
 
         LazyRow(
@@ -223,10 +224,6 @@ fun WelcomeScreen(
             }
         }
 
-        // -------------------------------------------------
-        // SMALL GAP
-        // -------------------------------------------------
-
         Spacer(
             modifier = Modifier.height(20.dp)
         )
@@ -256,6 +253,38 @@ fun WelcomeScreen(
             Text(
                 text = "Login",
                 fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(
+            modifier = Modifier.height(10.dp)
+        )
+
+        // -------------------------------------------------
+        // DEMO LOGIN
+        // -------------------------------------------------
+        Spacer(
+            modifier = Modifier.height(10.dp)
+        )
+        Button(
+            onClick = onDemoClick,
+
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+
+            shape = RoundedCornerShape(14.dp),
+
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.White,
+                contentColor = Color(0xFF0B1F3A)
+            )
+        ) {
+
+            Text(
+                text = "Demo Login",
+                fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
