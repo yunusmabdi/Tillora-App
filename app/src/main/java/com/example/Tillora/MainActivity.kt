@@ -18,7 +18,7 @@ import com.example.Tillora.screens.OtpVerificationScreen
 import com.example.Tillora.screens.RegisterScreen
 import com.example.Tillora.screens.WelcomeScreen
 import com.example.Tillora.viewmodel.AuthViewModel
-
+import androidx.compose.runtime.LaunchedEffect
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +46,10 @@ class MainActivity : ComponentActivity() {
 
                 val authViewModel = remember {
                     AuthViewModel()
+                }
+
+                LaunchedEffect(Unit) {
+                    authViewModel.initialize(applicationContext)
                 }
 
                 // =================================================
