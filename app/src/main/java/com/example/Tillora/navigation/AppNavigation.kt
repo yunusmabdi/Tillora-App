@@ -11,26 +11,30 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-
 import com.example.Tillora.components.CartItem
 import com.example.Tillora.models.Order
 import com.example.Tillora.models.Product
 import com.example.Tillora.screens.AccountScreen
 import com.example.Tillora.screens.CartScreen
+import com.example.Tillora.screens.CheckoutScreen
 import com.example.Tillora.screens.EditProfileScreen
 import com.example.Tillora.screens.HomeScreen
 import com.example.Tillora.screens.OrderTrackingScreen
 import com.example.Tillora.screens.OrdersScreen
+import com.example.Tillora.screens.viewmodel.OrderViewModel
 import com.example.Tillora.viewmodel.AuthViewModel
-
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.unit.dp
 private enum class AppScreen {
     HOME,
     CART,
+    CHECKOUT,
     ORDERS,
     ACCOUNT,
     EDIT_PROFILE,
@@ -46,33 +50,119 @@ fun AppNavigation(
     onRemoveItem: (CartItem) -> Unit,
     onIncreaseQuantity: (CartItem) -> Unit,
     onDecreaseQuantity: (CartItem) -> Unit,
-    onCheckoutClick: () -> Unit,
     onProductClick: (Product) -> Unit,
-    onCartClick: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onClearCart: () -> Unit
 ) {
 
     // =========================================================
-    // CURRENT APP SCREEN
+    // NAVIGATION STATE
     // =========================================================
 
     var currentScreen by remember {
         mutableStateOf(AppScreen.HOME)
     }
 
-    // =========================================================
-    // SELECTED ORDER
-    // =========================================================
-
     var selectedOrder by remember {
         mutableStateOf<Order?>(null)
     }
 
-    // =========================================================
-    // CUSTOMER
-    // =========================================================
+    var loadingOrder by remember {
+        mutableStateOf(false)
+    }
+
+    var orderLoadError by remember {
+        mutableStateOf<String?>(null)
+    }
 
     val customer by authViewModel.customer.collectAsState()
+
+    val orderViewModel: OrderViewModel = remember {
+        OrderViewModel()
+    }
+
+    // =========================================================
+    // ORDER TRACKING
+    // =========================================================
+
+    if (currentScreen == AppScreen.ORDER_TRACKING) {
+
+        when {
+
+            loadingOrder -> {
+
+                androidx.compose.foundation.layout.Box(
+                    modifier =
+                        androidx.compose.ui.Modifier
+                            .fillMaxSize(),
+
+                    contentAlignment =
+                        androidx.compose.ui.Alignment.Center
+                ) {
+
+                    androidx.compose.material3.CircularProgressIndicator()
+                }
+            }
+
+            selectedOrder != null -> {
+
+                OrderTrackingScreen(
+                    order = selectedOrder!!,
+
+                    onBackClick = {
+
+                        selectedOrder = null
+                        orderLoadError = null
+
+                        currentScreen =
+                            AppScreen.ORDERS
+
+                        // Refresh the orders list so that
+                        // the latest fulfillment/payment status
+                        // is displayed.
+                        orderViewModel.refreshOrders()
+                    }
+                )
+            }
+
+            orderLoadError != null -> {
+
+                androidx.compose.foundation.layout.Column(
+                    modifier =
+                        androidx.compose.ui.Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+
+                    horizontalAlignment =
+                        androidx.compose.ui.Alignment.CenterHorizontally,
+
+                    verticalArrangement =
+                        androidx.compose.foundation.layout.Arrangement.Center
+                ) {
+
+                    Text(
+                        text =
+                            orderLoadError
+                                ?: "Unable to load order."
+                    )
+
+                    androidx.compose.material3.Button(
+                        onClick = {
+
+                            orderLoadError = null
+                            currentScreen =
+                                AppScreen.ORDERS
+                        }
+                    ) {
+
+                        Text("Back to Orders")
+                    }
+                }
+            }
+        }
+
+        return
+    }
 
     // =========================================================
     // EDIT PROFILE
@@ -87,39 +177,51 @@ fun AppNavigation(
                 viewModel = authViewModel,
 
                 onCancelClick = {
-                    currentScreen = AppScreen.ACCOUNT
+
+                    currentScreen =
+                        AppScreen.ACCOUNT
                 }
             )
 
         } else {
 
-            currentScreen = AppScreen.ACCOUNT
+            currentScreen =
+                AppScreen.ACCOUNT
         }
 
         return
     }
 
     // =========================================================
-    // ORDER TRACKING
+    // CHECKOUT
     // =========================================================
 
-    if (currentScreen == AppScreen.ORDER_TRACKING) {
+    if (currentScreen == AppScreen.CHECKOUT) {
 
-        if (selectedOrder != null) {
+        CheckoutScreen(
+            cartItems = cartItems,
 
-            OrderTrackingScreen(
-                order = selectedOrder!!,
+            onBackClick = {
 
-                onBackClick = {
-                    selectedOrder = null
-                    currentScreen = AppScreen.ORDERS
-                }
-            )
+                currentScreen =
+                    AppScreen.CART
+            },
 
-        } else {
+            onOrderComplete = {
 
-            currentScreen = AppScreen.ORDERS
-        }
+                // Payment completed.
+                // Go directly to My Orders.
+                currentScreen =
+                    AppScreen.ORDERS
+
+                orderViewModel.refreshOrders()
+            },
+
+            onClearCart = {
+
+                onClearCart()
+            }
+        )
 
         return
     }
@@ -139,17 +241,30 @@ fun AppNavigation(
                 // =================================================
 
                 NavigationBarItem(
-                    selected = currentScreen == AppScreen.HOME,
+                    selected =
+                        currentScreen == AppScreen.HOME,
+
                     onClick = {
-                        currentScreen = AppScreen.HOME
+
+                        selectedOrder = null
+
+                        currentScreen =
+                            AppScreen.HOME
                     },
+
                     icon = {
+
                         Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = "Home"
+                            imageVector =
+                                Icons.Default.Home,
+
+                            contentDescription =
+                                "Home"
                         )
                     },
+
                     label = {
+
                         Text("Home")
                     }
                 )
@@ -159,17 +274,30 @@ fun AppNavigation(
                 // =================================================
 
                 NavigationBarItem(
-                    selected = currentScreen == AppScreen.CART,
+                    selected =
+                        currentScreen == AppScreen.CART,
+
                     onClick = {
-                        currentScreen = AppScreen.CART
+
+                        selectedOrder = null
+
+                        currentScreen =
+                            AppScreen.CART
                     },
+
                     icon = {
+
                         Icon(
-                            imageVector = Icons.Default.ShoppingCart,
-                            contentDescription = "Cart"
+                            imageVector =
+                                Icons.Default.ShoppingCart,
+
+                            contentDescription =
+                                "Cart"
                         )
                     },
+
                     label = {
+
                         Text("Cart")
                     }
                 )
@@ -179,17 +307,32 @@ fun AppNavigation(
                 // =================================================
 
                 NavigationBarItem(
-                    selected = currentScreen == AppScreen.ORDERS,
+                    selected =
+                        currentScreen == AppScreen.ORDERS,
+
                     onClick = {
-                        currentScreen = AppScreen.ORDERS
+
+                        selectedOrder = null
+
+                        currentScreen =
+                            AppScreen.ORDERS
+
+                        orderViewModel.refreshOrders()
                     },
+
                     icon = {
+
                         Icon(
-                            imageVector = Icons.Default.ReceiptLong,
-                            contentDescription = "Orders"
+                            imageVector =
+                                Icons.Default.ReceiptLong,
+
+                            contentDescription =
+                                "Orders"
                         )
                     },
+
                     label = {
+
                         Text("Orders")
                     }
                 )
@@ -199,17 +342,30 @@ fun AppNavigation(
                 // =================================================
 
                 NavigationBarItem(
-                    selected = currentScreen == AppScreen.ACCOUNT,
+                    selected =
+                        currentScreen == AppScreen.ACCOUNT,
+
                     onClick = {
-                        currentScreen = AppScreen.ACCOUNT
+
+                        selectedOrder = null
+
+                        currentScreen =
+                            AppScreen.ACCOUNT
                     },
+
                     icon = {
+
                         Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Account"
+                            imageVector =
+                                Icons.Default.AccountCircle,
+
+                            contentDescription =
+                                "Account"
                         )
                     },
+
                     label = {
+
                         Text("Account")
                     }
                 )
@@ -217,10 +373,6 @@ fun AppNavigation(
         }
 
     ) { paddingValues ->
-
-        // =========================================================
-        // SCREEN CONTENT
-        // =========================================================
 
         when (currentScreen) {
 
@@ -231,17 +383,23 @@ fun AppNavigation(
             AppScreen.HOME -> {
 
                 HomeScreen(
+
                     onBackClick = {},
 
                     onCartClick = {
-                        currentScreen = AppScreen.CART
+
+                        currentScreen =
+                            AppScreen.CART
                     },
 
-                    cartItemCount = cartItemCount,
+                    cartItemCount =
+                        cartItemCount,
 
-                    onProductClick = onProductClick,
+                    onProductClick =
+                        onProductClick,
 
-                    onAddToCart = onAddToCart
+                    onAddToCart =
+                        onAddToCart
                 )
             }
 
@@ -252,21 +410,38 @@ fun AppNavigation(
             AppScreen.CART -> {
 
                 CartScreen(
-                    cartItems = cartItems,
+
+                    cartItems =
+                        cartItems,
 
                     onBackClick = {
-                        currentScreen = AppScreen.HOME
+
+                        currentScreen =
+                            AppScreen.HOME
                     },
 
-                    onRemoveItem = onRemoveItem,
+                    onRemoveItem =
+                        onRemoveItem,
 
-                    onIncreaseQuantity = onIncreaseQuantity,
+                    onIncreaseQuantity =
+                        onIncreaseQuantity,
 
-                    onDecreaseQuantity = onDecreaseQuantity,
+                    onDecreaseQuantity =
+                        onDecreaseQuantity,
 
-                    onCheckoutClick = onCheckoutClick,
+                    onCheckoutClick = {
 
-                    contentPadding = paddingValues
+                        if (
+                            cartItems.isNotEmpty()
+                        ) {
+
+                            currentScreen =
+                                AppScreen.CHECKOUT
+                        }
+                    },
+
+                    contentPadding =
+                        paddingValues
                 )
             }
 
@@ -277,11 +452,48 @@ fun AppNavigation(
             AppScreen.ORDERS -> {
 
                 OrdersScreen(
+
+                    viewModel =
+                        orderViewModel,
+
                     onOrderClick = { order ->
 
-                        selectedOrder = order
+                        // Clear previous state.
+                        selectedOrder = null
+                        orderLoadError = null
+                        loadingOrder = true
 
-                        currentScreen = AppScreen.ORDER_TRACKING
+                        currentScreen =
+                            AppScreen.ORDER_TRACKING
+
+                        // =================================================
+                        // IMPORTANT
+                        // =================================================
+                        //
+                        // Do NOT use the order object directly.
+                        //
+                        // Fetch it again from Laravel so the tracking
+                        // screen receives the latest fulfillment_status.
+                        //
+                        orderViewModel.getOrder(
+                            id = order.id
+                        ) { latestOrder ->
+
+                            loadingOrder = false
+
+                            if (
+                                latestOrder != null
+                            ) {
+
+                                selectedOrder =
+                                    latestOrder
+
+                            } else {
+
+                                orderLoadError =
+                                    "Unable to load the latest order information."
+                            }
+                        }
                     }
                 )
             }
@@ -293,28 +505,45 @@ fun AppNavigation(
             AppScreen.ACCOUNT -> {
 
                 AccountScreen(
-                    authViewModel = authViewModel,
+
+                    authViewModel =
+                        authViewModel,
 
                     onEditProfileClick = {
-                        currentScreen = AppScreen.EDIT_PROFILE
+
+                        currentScreen =
+                            AppScreen.EDIT_PROFILE
                     },
 
                     onOrdersClick = {
-                        currentScreen = AppScreen.ORDERS
+
+                        currentScreen =
+                            AppScreen.ORDERS
+
+                        orderViewModel.refreshOrders()
                     },
 
                     onHelpClick = {
-                        // TODO: Help
+                        // TODO
                     },
 
                     onAboutClick = {
-                        // TODO: About
+                        // TODO
                     },
 
                     onLogoutClick = {
+
                         onLogout()
                     }
                 )
+            }
+
+            // =====================================================
+            // CHECKOUT
+            // =====================================================
+
+            AppScreen.CHECKOUT -> {
+                // Handled above Scaffold.
             }
 
             // =====================================================
@@ -322,7 +551,7 @@ fun AppNavigation(
             // =====================================================
 
             AppScreen.EDIT_PROFILE -> {
-                // Handled above before Scaffold.
+                // Handled above Scaffold.
             }
 
             // =====================================================
@@ -330,7 +559,7 @@ fun AppNavigation(
             // =====================================================
 
             AppScreen.ORDER_TRACKING -> {
-                // Handled above before Scaffold.
+                // Handled above Scaffold.
             }
         }
     }

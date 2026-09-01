@@ -3,22 +3,18 @@ package com.example.Tillora
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.Tillora.api.ApiClient
 import com.example.Tillora.components.CartItem
 import com.example.Tillora.models.Product
 import com.example.Tillora.navigation.AppNavigation
-import com.example.Tillora.screens.CheckoutScreen
 import com.example.Tillora.screens.LoginScreen
 import com.example.Tillora.screens.OtpVerificationScreen
-import com.example.Tillora.screens.ProductDetailsScreen
 import com.example.Tillora.screens.RegisterScreen
 import com.example.Tillora.screens.WelcomeScreen
 import com.example.Tillora.viewmodel.AuthViewModel
@@ -29,323 +25,338 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
+        enableEdgeToEdge()
+
+        // =====================================================
+        // INITIALIZE API CLIENT
+        // =====================================================
+        //
+        // AuthViewModel accesses ApiClient when it is created.
+        // Therefore ApiClient MUST be initialized first.
+        //
         ApiClient.initialize(applicationContext)
 
         setContent {
-            TilloraApp()
-        }
-    }
-}
 
-@Composable
-fun TilloraApp() {
+            MaterialTheme {
 
-    // =================================================
-    // AUTHENTICATION
-    // =================================================
+                // =================================================
+                // AUTH VIEW MODEL
+                // =================================================
 
-    val authViewModel: AuthViewModel = viewModel()
-
-    val context = LocalContext.current
-
-    LaunchedEffect(Unit) {
-        authViewModel.initialize(context)
-    }
-
-    // =================================================
-    // CURRENT SCREEN
-    // =================================================
-
-    var currentScreen by remember {
-        mutableStateOf("welcome")
-    }
-
-    // =================================================
-    // SELECTED PRODUCT
-    // =================================================
-
-    var selectedProduct by remember {
-        mutableStateOf<Product?>(null)
-    }
-
-    // =================================================
-    // SHARED CART
-    // =================================================
-
-    var cartItems by remember {
-        mutableStateOf<List<CartItem>>(emptyList())
-    }
-
-    // =================================================
-    // ADD TO CART
-    // =================================================
-
-    fun addToCart(product: Product) {
-
-        val existingItem = cartItems.find {
-            it.product.id == product.id
-        }
-
-        cartItems =
-            if (existingItem != null) {
-
-                cartItems.map {
-
-                    if (it.product.id == product.id) {
-
-                        it.copy(
-                            quantity = it.quantity + 1
-                        )
-
-                    } else {
-
-                        it
-                    }
+                val authViewModel = remember {
+                    AuthViewModel()
                 }
 
-            } else {
+                // =================================================
+                // CURRENT SCREEN
+                // =================================================
 
-                cartItems + CartItem(
-                    product = product,
-                    quantity = 1
-                )
-            }
-    }
-
-    // =================================================
-    // NAVIGATION
-    // =================================================
-
-    when (currentScreen) {
-
-        // =================================================
-        // WELCOME
-        // =================================================
-
-        "welcome" -> {
-
-            WelcomeScreen(
-
-                onLoginClick = {
-                    currentScreen = "login"
-                },
-
-                onDemoClick = {
-
-                    authViewModel.demoLogin {
-
-                        currentScreen = "main"
-                    }
+                var currentScreen by remember {
+                    mutableStateOf("welcome")
                 }
-            )
-        }
 
-        // =================================================
-        // LOGIN
-        // =================================================
+                // =================================================
+                // CART
+                // =================================================
 
-        "login" -> {
+                var cartItems by remember {
+                    mutableStateOf<List<CartItem>>(emptyList())
+                }
 
-            LoginScreen(
+                // =================================================
+                // ADD TO CART
+                // =================================================
 
-                onBackClick = {
-                    currentScreen = "welcome"
-                },
+                fun addToCart(product: Product) {
 
-                onRegisterClick = {
-                    currentScreen = "register"
-                },
-
-                onLoginSuccess = {
-                    currentScreen = "main"
-                },
-
-                viewModel = authViewModel
-            )
-        }
-
-        // =================================================
-        // REGISTER
-        // =================================================
-
-        "register" -> {
-
-            RegisterScreen(
-
-                onBackClick = {
-                    currentScreen = "login"
-                },
-
-                onLoginClick = {
-                    currentScreen = "login"
-                },
-
-                onOtpSent = {
-                    currentScreen = "otp_verification"
-                },
-
-                viewModel = authViewModel
-            )
-        }
-
-        // =================================================
-        // OTP VERIFICATION
-        // =================================================
-
-        "otp_verification" -> {
-
-            OtpVerificationScreen(
-
-                onBackClick = {
-                    currentScreen = "register"
-                },
-
-                onVerificationSuccess = {
-                    currentScreen = "main"
-                },
-
-                viewModel = authViewModel
-            )
-        }
-
-        // =================================================
-        // MAIN APP
-        // =================================================
-
-        "main" -> {
-
-            AppNavigation(
-
-                authViewModel = authViewModel,
-
-                cartItemCount = cartItems.sumOf {
-                    it.quantity
-                },
-
-                cartItems = cartItems,
-
-                onAddToCart = { product ->
-                    addToCart(product)
-                },
-
-                onRemoveItem = { item ->
-
-                    cartItems = cartItems.filter {
-                        it.product.id != item.product.id
-                    }
-                },
-
-                onIncreaseQuantity = { item ->
-
-                    cartItems = cartItems.map {
-
-                        if (it.product.id == item.product.id) {
-
-                            it.copy(
-                                quantity = it.quantity + 1
-                            )
-
-                        } else {
-
-                            it
+                    val existingItem =
+                        cartItems.find {
+                            it.product.id == product.id
                         }
-                    }
-                },
 
-                onDecreaseQuantity = { item ->
+                    cartItems =
+                        if (existingItem != null) {
 
-                    cartItems = cartItems.mapNotNull {
+                            cartItems.map {
 
-                        if (it.product.id == item.product.id) {
+                                if (
+                                    it.product.id ==
+                                    product.id
+                                ) {
 
-                            if (it.quantity > 1) {
+                                    it.copy(
+                                        quantity =
+                                            it.quantity + 1
+                                    )
 
-                                it.copy(
-                                    quantity = it.quantity - 1
-                                )
+                                } else {
 
-                            } else {
-
-                                null
+                                    it
+                                }
                             }
 
                         } else {
 
-                            it
+                            cartItems +
+                                    CartItem(
+                                        product = product,
+                                        quantity = 1
+                                    )
                         }
+                }
+
+                // =================================================
+                // APPLICATION NAVIGATION
+                // =================================================
+
+                when (currentScreen) {
+
+                    // =================================================
+                    // WELCOME
+                    // =================================================
+
+                    "welcome" -> {
+
+                        WelcomeScreen(
+
+                            onLoginClick = {
+
+                                currentScreen = "login"
+                            },
+
+                            // KEEP DEMO LOGIN
+                            onDemoClick = {
+
+                                authViewModel.demoLogin {
+
+                                    currentScreen = "main"
+                                }
+                            }
+                        )
                     }
-                },
 
-                onCheckoutClick = {
-                    currentScreen = "checkout"
-                },
+                    // =================================================
+                    // LOGIN
+                    // =================================================
 
-                onProductClick = { product ->
+                    "login" -> {
 
-                    selectedProduct = product
+                        LoginScreen(
 
-                    currentScreen = "product_details"
-                },
+                            viewModel = authViewModel,
 
-                onCartClick = {
-                    // Handled by AppNavigation.
-                },
+                            onLoginSuccess = {
 
-                onLogout = {
+                                currentScreen = "main"
+                            },
 
-                    authViewModel.logout {
+                            onBackClick = {
 
-                        cartItems = emptyList()
+                                currentScreen = "welcome"
+                            }
+                        )
+                    }
 
-                        selectedProduct = null
+                    // =================================================
+                    // REGISTER
+                    // =================================================
 
-                        currentScreen = "login"
+                    "register" -> {
+
+                        RegisterScreen(
+
+                            viewModel = authViewModel,
+
+                            onBackClick = {
+
+                                currentScreen = "welcome"
+                            },
+
+                            onLoginClick = {
+
+                                currentScreen = "login"
+                            },
+
+                            onOtpSent = {
+
+                                currentScreen = "otp"
+                            }
+                        )
+                    }
+
+                    // =================================================
+                    // OTP VERIFICATION
+                    // =================================================
+
+                    "otp" -> {
+
+                        OtpVerificationScreen(
+
+                            viewModel = authViewModel,
+
+                            onVerificationSuccess = {
+
+                                currentScreen = "main"
+                            },
+
+                            onBackClick = {
+
+                                currentScreen = "register"
+                            }
+                        )
+                    }
+
+                    // =================================================
+                    // MAIN APPLICATION
+                    // =================================================
+
+                    "main" -> {
+
+                        AppNavigation(
+
+                            authViewModel = authViewModel,
+
+                            // -----------------------------------------
+                            // CART COUNT
+                            // -----------------------------------------
+
+                            cartItemCount =
+                                cartItems.sumOf {
+                                    it.quantity
+                                },
+
+                            // -----------------------------------------
+                            // ADD TO CART
+                            // -----------------------------------------
+
+                            onAddToCart = { product ->
+
+                                addToCart(product)
+                            },
+
+                            // -----------------------------------------
+                            // CART ITEMS
+                            // -----------------------------------------
+
+                            cartItems = cartItems,
+
+                            // -----------------------------------------
+                            // REMOVE ITEM
+                            // -----------------------------------------
+
+                            onRemoveItem = { item ->
+
+                                cartItems =
+                                    cartItems.filterNot {
+
+                                        it.product.id ==
+                                                item.product.id
+                                    }
+                            },
+
+                            // -----------------------------------------
+                            // INCREASE QUANTITY
+                            // -----------------------------------------
+
+                            onIncreaseQuantity = { item ->
+
+                                cartItems =
+                                    cartItems.map {
+
+                                        if (
+                                            it.product.id ==
+                                            item.product.id
+                                        ) {
+
+                                            it.copy(
+                                                quantity =
+                                                    it.quantity + 1
+                                            )
+
+                                        } else {
+
+                                            it
+                                        }
+                                    }
+                            },
+
+                            // -----------------------------------------
+                            // DECREASE QUANTITY
+                            // -----------------------------------------
+
+                            onDecreaseQuantity = { item ->
+
+                                cartItems =
+                                    cartItems.mapNotNull {
+
+                                        if (
+                                            it.product.id ==
+                                            item.product.id
+                                        ) {
+
+                                            if (
+                                                it.quantity > 1
+                                            ) {
+
+                                                it.copy(
+                                                    quantity =
+                                                        it.quantity - 1
+                                                )
+
+                                            } else {
+
+                                                null
+                                            }
+
+                                        } else {
+
+                                            it
+                                        }
+                                    }
+                            },
+
+                            // -----------------------------------------
+                            // PRODUCT CLICK
+                            // -----------------------------------------
+                            //
+                            // Product details navigation is handled
+                            // inside AppNavigation.
+                            //
+                            onProductClick = { product ->
+
+                                // Handled by AppNavigation.
+                            },
+
+                            // -----------------------------------------
+                            // LOGOUT
+                            // -----------------------------------------
+
+                            onLogout = {
+
+                                authViewModel.logout {
+
+                                    cartItems =
+                                        emptyList()
+
+                                    currentScreen =
+                                        "welcome"
+                                }
+                            },
+
+                            // -----------------------------------------
+                            // CLEAR CART
+                            // -----------------------------------------
+
+                            onClearCart = {
+
+                                cartItems =
+                                    emptyList()
+                            }
+                        )
                     }
                 }
-            )
-        }
-
-        // =================================================
-        // PRODUCT DETAILS
-        // =================================================
-
-        "product_details" -> {
-
-            selectedProduct?.let { product ->
-
-                ProductDetailsScreen(
-
-                    product = product,
-
-                    onBackClick = {
-
-                        selectedProduct = null
-
-                        currentScreen = "main"
-                    },
-
-                    onAddToCart = { productToAdd ->
-
-                        addToCart(productToAdd)
-
-                        currentScreen = "main"
-                    }
-                )
             }
-        }
-
-        // =================================================
-        // CHECKOUT
-        // =================================================
-
-        "checkout" -> {
-
-            CheckoutScreen(
-
-                onBackClick = {
-                    currentScreen = "main"
-                }
-            )
         }
     }
 }

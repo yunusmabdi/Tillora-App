@@ -13,14 +13,27 @@ class OrderViewModel(
     private val repository: OrderRepository = OrderRepository()
 ) : ViewModel() {
 
-    private val _orders = MutableStateFlow<List<Order>>(emptyList())
-    val orders: StateFlow<List<Order>> = _orders.asStateFlow()
+    private val _orders =
+        MutableStateFlow<List<Order>>(emptyList())
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    val orders: StateFlow<List<Order>> =
+        _orders.asStateFlow()
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
+    private val _isLoading =
+        MutableStateFlow(false)
+
+    val isLoading: StateFlow<Boolean> =
+        _isLoading.asStateFlow()
+
+    private val _error =
+        MutableStateFlow<String?>(null)
+
+    val error: StateFlow<String?> =
+        _error.asStateFlow()
+
+    // =========================================================
+    // LOAD ORDERS
+    // =========================================================
 
     fun loadOrders() {
 
@@ -35,12 +48,25 @@ class OrderViewModel(
                 }
                 .onFailure { exception ->
                     _error.value =
-                        exception.message ?: "Failed to load orders."
+                        exception.message
+                            ?: "Failed to load orders."
                 }
 
             _isLoading.value = false
         }
     }
+
+    // =========================================================
+    // REFRESH ORDERS
+    // =========================================================
+
+    fun refreshOrders() {
+        loadOrders()
+    }
+
+    // =========================================================
+    // GET SINGLE ORDER
+    // =========================================================
 
     fun getOrder(
         id: Int,
@@ -50,10 +76,18 @@ class OrderViewModel(
         viewModelScope.launch {
 
             repository.getOrder(id)
+
                 .onSuccess { order ->
+
                     onResult(order)
                 }
-                .onFailure {
+
+                .onFailure { exception ->
+
+                    _error.value =
+                        exception.message
+                            ?: "Failed to load order."
+
                     onResult(null)
                 }
         }

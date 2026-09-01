@@ -25,6 +25,9 @@ data class Order(
     @SerializedName("payment_method")
     val paymentMethod: String?,
 
+    @SerializedName("transaction_reference")
+    val transactionReference: String?,
+
     val subtotal: Double,
 
     @SerializedName("discount_amount")

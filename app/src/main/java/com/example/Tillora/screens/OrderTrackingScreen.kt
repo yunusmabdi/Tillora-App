@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.Icon
@@ -64,8 +63,10 @@ fun OrderTrackingScreen(
                 .fillMaxWidth()
                 .background(Color.White)
                 .padding(
-                    horizontal = 8.dp,
-                    vertical = 8.dp
+                    start = 8.dp,
+                    end = 16.dp,
+                    top = 32.dp,
+                    bottom = 12.dp
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -144,7 +145,7 @@ fun OrderTrackingScreen(
 
             item {
                 TrackingCard(
-                    status = order.status
+                    status = order.fulfillmentStatus
                 )
             }
 
@@ -189,9 +190,7 @@ fun OrderTrackingScreen(
             // =================================================
 
             item {
-                PaymentCard(
-                    order = order
-                )
+                PaymentCard(order)
             }
 
             // =================================================
@@ -209,6 +208,7 @@ fun OrderTrackingScreen(
         }
     }
 }
+
 
 // =============================================================
 // ORDER HEADER
@@ -267,6 +267,7 @@ private fun OrderHeader(
     }
 }
 
+
 // =============================================================
 // DELIVERY CARD
 // =============================================================
@@ -282,6 +283,7 @@ private fun DeliveryCard(
             .clip(RoundedCornerShape(16.dp))
             .background(Color.White)
             .padding(20.dp),
+
         verticalAlignment = Alignment.CenterVertically
     ) {
 
@@ -330,6 +332,7 @@ private fun DeliveryCard(
     }
 }
 
+
 // =============================================================
 // TRACKING CARD
 // =============================================================
@@ -339,32 +342,33 @@ private fun TrackingCard(
     status: String
 ) {
 
-    val normalizedStatus = status.lowercase()
+    val normalizedStatus =
+        status
+            .trim()
+            .lowercase(Locale.ROOT)
+
+    /*
+     * These MUST match Laravel's fulfillment_status values.
+     *
+     * pending
+     * preparing
+     * ready
+     * out_for_delivery
+     * delivered
+     */
 
     val steps = listOf(
-        "placed",
-        "confirmed",
-        "processing",
-        "shipped",
+        "pending",
+        "preparing",
+        "ready",
+        "out_for_delivery",
         "delivered"
     )
 
-    val currentStep = when (normalizedStatus) {
-
-        "pending",
-        "placed" -> 0
-
-        "confirmed" -> 1
-
-        "processing" -> 2
-
-        "shipped" -> 3
-
-        "delivered",
-        "completed" -> 4
-
-        else -> 0
-    }
+    val currentStep =
+        steps.indexOf(normalizedStatus)
+            .takeIf { it >= 0 }
+            ?: 0
 
     Column(
         modifier = Modifier
@@ -375,7 +379,7 @@ private fun TrackingCard(
     ) {
 
         Text(
-            text = "Order Status",
+            text = "Order Tracking",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = TilloraTextPrimary
@@ -388,16 +392,56 @@ private fun TrackingCard(
         steps.forEachIndexed { index, step ->
 
             TrackingStep(
-                title = step.replaceFirstChar {
-                    it.uppercase()
-                },
-                isCompleted = index <= currentStep,
-                isCurrent = index == currentStep,
-                showLine = index < steps.lastIndex
+                title = trackingLabel(step),
+
+                isCompleted =
+                    index <= currentStep,
+
+                isCurrent =
+                    index == currentStep,
+
+                showLine =
+                    index < steps.lastIndex
             )
         }
     }
 }
+
+
+// =============================================================
+// TRACKING LABEL
+// =============================================================
+
+private fun trackingLabel(
+    status: String
+): String {
+
+    return when (status) {
+
+        "pending" ->
+            "Placed"
+
+        "preparing" ->
+            "Processing"
+
+        "ready" ->
+            "Ready"
+
+        "out_for_delivery" ->
+            "Out for Delivery"
+
+        "delivered" ->
+            "Delivered"
+
+        else ->
+            status
+                .replace("_", " ")
+                .replaceFirstChar {
+                    it.uppercase()
+                }
+    }
+}
+
 
 // =============================================================
 // TRACKING STEP
@@ -473,30 +517,41 @@ private fun TrackingStep(
 
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (isCurrent) {
-                    FontWeight.Bold
-                } else {
-                    FontWeight.Medium
-                },
-                color = if (isCompleted) {
-                    TilloraTextPrimary
-                } else {
-                    TilloraTextSecondary
-                }
+
+                style =
+                    MaterialTheme.typography.bodyMedium,
+
+                fontWeight =
+                    if (isCurrent) {
+                        FontWeight.Bold
+                    } else {
+                        FontWeight.Medium
+                    },
+
+                color =
+                    if (isCompleted) {
+                        TilloraTextPrimary
+                    } else {
+                        TilloraTextSecondary
+                    }
             )
 
             if (isCurrent) {
 
                 Text(
                     text = "Current status",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TilloraNavy
+
+                    style =
+                        MaterialTheme.typography.bodySmall,
+
+                    color =
+                        TilloraNavy
                 )
             }
         }
     }
 }
+
 
 // =============================================================
 // ORDER ITEM
@@ -513,6 +568,7 @@ private fun OrderItemRow(
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
             .padding(14.dp),
+
         verticalAlignment = Alignment.CenterVertically
     ) {
 
@@ -521,6 +577,7 @@ private fun OrderItemRow(
                 .size(60.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(TilloraBackground),
+
             contentAlignment = Alignment.Center
         ) {
 
@@ -541,10 +598,17 @@ private fun OrderItemRow(
         ) {
 
             Text(
-                text = item.product?.name ?: "Product",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = TilloraTextPrimary
+                text =
+                    item.product?.name ?: "Product",
+
+                style =
+                    MaterialTheme.typography.bodyLarge,
+
+                fontWeight =
+                    FontWeight.SemiBold,
+
+                color =
+                    TilloraTextPrimary
             )
 
             Spacer(
@@ -552,9 +616,14 @@ private fun OrderItemRow(
             )
 
             Text(
-                text = "Qty: ${item.quantity}",
-                style = MaterialTheme.typography.bodySmall,
-                color = TilloraTextSecondary
+                text =
+                    "Qty: ${item.quantity}",
+
+                style =
+                    MaterialTheme.typography.bodySmall,
+
+                color =
+                    TilloraTextSecondary
             )
 
             Spacer(
@@ -562,20 +631,33 @@ private fun OrderItemRow(
             )
 
             Text(
-                text = formatCurrency(item.unitPrice),
-                style = MaterialTheme.typography.bodySmall,
-                color = TilloraTextSecondary
+                text =
+                    formatCurrency(item.unitPrice),
+
+                style =
+                    MaterialTheme.typography.bodySmall,
+
+                color =
+                    TilloraTextSecondary
             )
         }
 
         Text(
-            text = formatCurrency(item.lineTotal),
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            color = TilloraNavy
+            text =
+                formatCurrency(item.lineTotal),
+
+            style =
+                MaterialTheme.typography.bodyLarge,
+
+            fontWeight =
+                FontWeight.Bold,
+
+            color =
+                TilloraNavy
         )
     }
 }
+
 
 // =============================================================
 // ORDER SUMMARY
@@ -614,7 +696,8 @@ private fun OrderSummary(
 
             SummaryRow(
                 label = "Discount",
-                value = "- ${formatCurrency(order.discountAmount)}"
+                value =
+                    "- ${formatCurrency(order.discountAmount)}"
             )
         }
 
@@ -627,7 +710,8 @@ private fun OrderSummary(
 
             SummaryRow(
                 label = "Delivery Fee",
-                value = formatCurrency(order.deliveryFee)
+                value =
+                    formatCurrency(order.deliveryFee)
             )
         }
 
@@ -668,6 +752,7 @@ private fun OrderSummary(
     }
 }
 
+
 // =============================================================
 // SUMMARY ROW
 // =============================================================
@@ -682,7 +767,9 @@ private fun SummaryRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 5.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+
+        horizontalArrangement =
+            Arrangement.SpaceBetween
     ) {
 
         Text(
@@ -699,6 +786,7 @@ private fun SummaryRow(
     }
 }
 
+
 // =============================================================
 // PAYMENT CARD
 // =============================================================
@@ -714,7 +802,9 @@ private fun PaymentCard(
             .clip(RoundedCornerShape(16.dp))
             .background(Color.White)
             .padding(20.dp),
-        verticalAlignment = Alignment.CenterVertically
+
+        verticalAlignment =
+            Alignment.CenterVertically
     ) {
 
         Box(
@@ -724,7 +814,9 @@ private fun PaymentCard(
                 .background(
                     TilloraNavy.copy(alpha = 0.10f)
                 ),
-            contentAlignment = Alignment.Center
+
+            contentAlignment =
+                Alignment.Center
         ) {
 
             Icon(
@@ -753,10 +845,18 @@ private fun PaymentCard(
             )
 
             Text(
-                text = order.paymentMethod ?: "Not specified",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = TilloraTextPrimary
+                text =
+                    order.paymentMethod
+                        ?: "Not specified",
+
+                style =
+                    MaterialTheme.typography.bodyLarge,
+
+                fontWeight =
+                    FontWeight.SemiBold,
+
+                color =
+                    TilloraTextPrimary
             )
 
             Spacer(
@@ -764,13 +864,19 @@ private fun PaymentCard(
             )
 
             Text(
-                text = "Paid: ${formatCurrency(order.amountPaid)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = TilloraTextSecondary
+                text =
+                    "Paid: ${formatCurrency(order.amountPaid)}",
+
+                style =
+                    MaterialTheme.typography.bodySmall,
+
+                color =
+                    TilloraTextSecondary
             )
         }
     }
 }
+
 
 // =============================================================
 // NOTES CARD
@@ -808,6 +914,7 @@ private fun NotesCard(
     }
 }
 
+
 // =============================================================
 // CURRENCY
 // =============================================================
@@ -816,5 +923,11 @@ private fun formatCurrency(
     amount: Double
 ): String {
 
-    return "KSh ${String.format(Locale.US, "%,.2f", amount)}"
+    return "KSh ${
+        String.format(
+            Locale.US,
+            "%,.2f",
+            amount
+        )
+    }"
 }
