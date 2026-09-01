@@ -71,7 +71,7 @@ fun AccountScreen(
             color = Color(0xFF0B1F3A),
             modifier = Modifier.padding(
                 top = 35.dp,
-                bottom = 20.dp
+                bottom = 8.dp
             )
         )
 

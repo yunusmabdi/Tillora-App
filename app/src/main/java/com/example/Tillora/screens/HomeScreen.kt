@@ -122,8 +122,9 @@ fun HomeScreen(
                 .fillMaxWidth()
                 .padding(
                     start = 8.dp,
-                    end = 12.dp,
-                    top = 20.dp
+                    end = 16.dp,
+                    top = 35.dp,
+                    bottom = 8.dp
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {

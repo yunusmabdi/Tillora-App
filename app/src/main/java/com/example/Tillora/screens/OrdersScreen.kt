@@ -97,9 +97,10 @@ fun OrdersScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    start = 20.dp,
-                    end = 20.dp,
-                    top = 20.dp
+                    start = 8.dp,
+                    end = 16.dp,
+                    top = 35.dp,
+                    bottom = 8.dp
                 )
         ) {
 
