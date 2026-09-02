@@ -64,72 +64,56 @@ fun OrdersScreen(
 
     val filteredOrders = when (selectedFilter) {
 
-        /*
-         * Processing:
-         * Order Placed
-         * Processing
-         * Ready
-         */
         "Processing" -> {
-            orders.filter { order ->
-                order.fulfillmentStatus.equals(
-                    "order placed",
-                    ignoreCase = true
-                ) ||
-                        order.fulfillmentStatus.equals(
-                            "processing",
-                            ignoreCase = true
-                        ) ||
-                        order.fulfillmentStatus.equals(
-                            "ready",
-                            ignoreCase = true
-                        )
-            }
+            orders
+                .filter { order ->
+                    order.fulfillmentStatus.equals("order placed", ignoreCase = true) ||
+                            order.fulfillmentStatus.equals("processing", ignoreCase = true) ||
+                            order.fulfillmentStatus.equals("ready", ignoreCase = true)
+                }
+                .sortedByDescending { it.createdAt }
         }
 
-        /*
-         * Shipped:
-         * Out for Delivery
-         */
         "Shipped" -> {
-            orders.filter { order ->
-                order.fulfillmentStatus.equals(
-                    "out for delivery",
-                    ignoreCase = true
-                )
-            }
+            orders
+                .filter { order ->
+                    order.fulfillmentStatus.equals(
+                        "out for delivery",
+                        ignoreCase = true
+                    )
+                }
+                .sortedByDescending { it.createdAt }
         }
 
-        /*
-         * Delivered:
-         * Delivered
-         */
         "Delivered" -> {
-            orders.filter { order ->
-                order.fulfillmentStatus.equals(
-                    "delivered",
-                    ignoreCase = true
-                )
-            }
+            orders
+                .filter { order ->
+                    order.fulfillmentStatus.equals(
+                        "delivered",
+                        ignoreCase = true
+                    )
+                }
+                .sortedByDescending { it.createdAt }
         }
 
-        /*
-         * Cancelled:
-         * Cancelled
-         */
         "Cancelled" -> {
-            orders.filter { order ->
-                order.fulfillmentStatus.equals(
-                    "cancelled",
-                    ignoreCase = true
-                )
-            }
+            orders
+                .filter { order ->
+                    order.fulfillmentStatus.equals(
+                        "cancelled",
+                        ignoreCase = true
+                    )
+                }
+                .sortedByDescending { it.createdAt }
         }
 
-        /*
-         * All orders
-         */
-        else -> orders
+        "All" -> {
+            orders.sortedByDescending { it.createdAt }
+        }
+
+        else -> {
+            orders.sortedByDescending { it.createdAt }
+        }
     }
 
     Column(
