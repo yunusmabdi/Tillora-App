@@ -7,39 +7,34 @@ import com.example.Tillora.components.CartItem
 import com.example.Tillora.models.CheckoutItemRequest
 import com.example.Tillora.models.ConfirmPaymentRequest
 import com.example.Tillora.models.CreateOrderRequest
-import com.example.Tillora.models.DeliveryCalculationRequest
+import com.example.Tillora.models.DeliveryZone
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// =========================================================
-// DELIVERY RESULT
-// =========================================================
+
+// =====================================================
+// DELIVERY ZONE
+// =====================================================
 
 data class DeliveryResult(
-    val deliverable: Boolean = false,
-    val distance: Double = 0.0,
-    val deliveryFee: Double = 0.0,
     val zoneId: Int? = null,
-    val zoneName: String? = null
+    val zoneName: String? = null,
+    val deliveryFee: Double = 0.0
 )
 
-// =========================================================
+
+// =====================================================
 // CHECKOUT STATE
-// =========================================================
+// =====================================================
 
 data class CheckoutState(
-
     val deliveryAddress: String = "",
 
-    val latitude: Double? = null,
-
-    val longitude: Double? = null,
-
-    val isCalculatingDelivery: Boolean = false,
-
-    val deliveryResult: DeliveryResult? = null,
+    val deliveryZones: List<DeliveryZone> = emptyList(),
+    val selectedDeliveryZone: DeliveryZone? = null,
+    val isLoadingDeliveryZones: Boolean = false,
 
     val notes: String = "",
 
@@ -56,182 +51,134 @@ data class CheckoutState(
     val successMessage: String? = null
 )
 
-// =========================================================
+
+// =====================================================
 // CHECKOUT VIEW MODEL
-// =========================================================
+// =====================================================
 
 class CheckoutViewModel : ViewModel() {
 
-    private val _state =
-        MutableStateFlow(CheckoutState())
+    private val api = ApiClient.api
+
+    private val _state = MutableStateFlow(CheckoutState())
 
     val state: StateFlow<CheckoutState> =
         _state.asStateFlow()
 
-    // =====================================================
-    // ADDRESS
-    // =====================================================
 
-    fun setDeliveryAddress(
-        address: String
-    ) {
+    // =================================================
+    // DELIVERY ADDRESS
+    // =================================================
 
-        _state.value =
-            _state.value.copy(
-                deliveryAddress = address,
-                deliveryResult = null,
-                error = null
-            )
+    fun setDeliveryAddress(address: String) {
+        _state.value = _state.value.copy(
+            deliveryAddress = address,
+            error = null
+        )
     }
 
-    // =====================================================
-    // CUSTOMER LOCATION
-    // =====================================================
 
-    fun setCustomerLocation(
-        latitude: Double,
-        longitude: Double
-    ) {
+    // =================================================
+    // LOAD DELIVERY ZONES
+    // =================================================
 
-        _state.value =
-            _state.value.copy(
-                latitude = latitude,
-                longitude = longitude,
-                error = null
-            )
-    }
+    fun loadDeliveryZones() {
 
-    // =====================================================
-    // CALCULATE DELIVERY
-    // =====================================================
-
-    fun calculateDelivery() {
-
-        val currentState =
-            _state.value
-
-        val latitude =
-            currentState.latitude
-
-        val longitude =
-            currentState.longitude
-
-        if (latitude == null || longitude == null) {
-
-            _state.value =
-                currentState.copy(
-                    error =
-                        "Please provide your delivery location."
-                )
-
+        if (_state.value.isLoadingDeliveryZones) {
             return
         }
 
         viewModelScope.launch {
 
-            _state.value =
-                _state.value.copy(
-                    isCalculatingDelivery = true,
-                    error = null
-                )
+            _state.value = _state.value.copy(
+                isLoadingDeliveryZones = true,
+                error = null
+            )
 
             try {
 
                 val response =
-                    ApiClient.api.calculateDelivery(
-                        DeliveryCalculationRequest(
-                            latitude = latitude,
-                            longitude = longitude
-                        )
+                    api.getDeliveryZones()
+
+                if (response.success) {
+
+                    _state.value = _state.value.copy(
+                        deliveryZones =
+                            response.delivery_zones,
+                        isLoadingDeliveryZones = false
                     )
-
-                if (response.deliverable == true) {
-
-                    _state.value =
-                        _state.value.copy(
-
-                            isCalculatingDelivery =
-                                false,
-
-                            deliveryResult =
-                                DeliveryResult(
-
-                                    deliverable = true,
-
-                                    distance =
-                                        response.distance
-                                            ?: 0.0,
-
-                                    deliveryFee =
-                                        response.delivery_fee
-                                            ?: 0.0,
-
-                                    zoneId =
-                                        response.zone?.id,
-
-                                    zoneName =
-                                        response.zone?.name
-                                ),
-
-                            error = null
-                        )
 
                 } else {
 
-                    _state.value =
-                        _state.value.copy(
-
-                            isCalculatingDelivery =
-                                false,
-
-                            deliveryResult =
-                                DeliveryResult(
-                                    deliverable = false
-                                ),
-
-                            error =
-                                response.message
-                                    ?: "This location is outside our delivery area."
-                        )
+                    _state.value = _state.value.copy(
+                        isLoadingDeliveryZones = false,
+                        error =
+                            response.message
+                                ?: "Unable to load delivery zones."
+                    )
                 }
 
             } catch (e: Exception) {
 
-                _state.value =
-                    _state.value.copy(
-
-                        isCalculatingDelivery =
-                            false,
-
-                        error =
-                            e.message
-                                ?: "Unable to calculate delivery."
-                    )
+                _state.value = _state.value.copy(
+                    isLoadingDeliveryZones = false,
+                    error =
+                        e.message
+                            ?: "Unable to load delivery zones."
+                )
             }
         }
     }
 
-    // =====================================================
-    // NOTES
-    // =====================================================
 
-    fun setNotes(
-        notes: String
-    ) {
+    // =================================================
+    // SELECT DELIVERY ZONE
+    // =================================================
 
-        _state.value =
-            _state.value.copy(
-                notes = notes
-            )
+    fun selectDeliveryZone(zone: DeliveryZone) {
+
+        _state.value = _state.value.copy(
+            selectedDeliveryZone = zone,
+            error = null
+        )
     }
 
-    // =====================================================
-    // PAYMENT OPTION
-    // =====================================================
 
-    fun setPaymentOption(
-        option: String
-    ) {
+    // =================================================
+    // DELIVERY RESULT
+    // =================================================
+
+    fun getDeliveryResult(): DeliveryResult? {
+
+        val zone =
+            _state.value.selectedDeliveryZone
+                ?: return null
+
+        return DeliveryResult(
+            zoneId = zone.id,
+            zoneName = zone.name,
+            deliveryFee = zone.fee
+        )
+    }
+
+
+    // =================================================
+    // NOTES
+    // =================================================
+
+    fun setNotes(notes: String) {
+
+        _state.value = _state.value.copy(
+            notes = notes
+        )
+    }
+
+
+    // =================================================
+    // PAYMENT OPTION
+    // =================================================
+
+    fun setPaymentOption(option: String) {
 
         if (
             option != "full" &&
@@ -240,109 +187,83 @@ class CheckoutViewModel : ViewModel() {
             return
         }
 
-        _state.value =
-            _state.value.copy(
-                paymentOption = option,
-                error = null
-            )
+        _state.value = _state.value.copy(
+            paymentOption = option,
+            error = null
+        )
     }
 
-    // =====================================================
+
+    // =================================================
     // CREATE ORDER
-    // =====================================================
+    // =================================================
 
     fun createOrder(
         cartItems: List<CartItem>,
-        onSuccess: (Int) -> Unit
+        onSuccess: (Int, Double) -> Unit
     ) {
 
-        val currentState =
-            _state.value
+        val currentState = _state.value
+
+        // ---------------------------------------------
+        // VALIDATE CART
+        // ---------------------------------------------
 
         if (cartItems.isEmpty()) {
 
-            _state.value =
-                currentState.copy(
-                    error = "Your cart is empty."
-                )
+            _state.value = currentState.copy(
+                error = "Your cart is empty."
+            )
 
             return
         }
+
+        // ---------------------------------------------
+        // VALIDATE ADDRESS
+        // ---------------------------------------------
 
         if (
-            currentState.deliveryAddress.isBlank()
+            currentState.deliveryAddress
+                .isBlank()
         ) {
 
-            _state.value =
-                currentState.copy(
-                    error =
-                        "Please enter your delivery address."
-                )
+            _state.value = currentState.copy(
+                error =
+                    "A delivery address is required."
+            )
 
             return
         }
 
-        val latitude =
-            currentState.latitude
+        // ---------------------------------------------
+        // VALIDATE DELIVERY ZONE
+        // ---------------------------------------------
 
-        val longitude =
-            currentState.longitude
+        val zone =
+            currentState.selectedDeliveryZone
 
-        if (
-            latitude == null ||
-            longitude == null
-        ) {
+        if (zone == null) {
 
-            _state.value =
-                currentState.copy(
-                    error =
-                        "Please provide your delivery location."
-                )
-
-            return
-        }
-
-        val delivery =
-            currentState.deliveryResult
-
-        if (
-            delivery == null ||
-            !delivery.deliverable
-        ) {
-
-            _state.value =
-                currentState.copy(
-                    error =
-                        "Please calculate your delivery fee first."
-                )
-
-            return
-        }
-
-        val zoneId =
-            delivery.zoneId
-
-        if (zoneId == null) {
-
-            _state.value =
-                currentState.copy(
-                    error =
-                        "No delivery zone was found."
-                )
+            _state.value = currentState.copy(
+                error =
+                    "Please select a delivery zone."
+            )
 
             return
         }
 
         viewModelScope.launch {
 
-            _state.value =
-                _state.value.copy(
-                    isSubmittingOrder = true,
-                    error = null,
-                    successMessage = null
-                )
+            _state.value = _state.value.copy(
+                isSubmittingOrder = true,
+                error = null
+            )
 
             try {
+
+                // -------------------------------------
+                // CREATE REQUEST
+                // -------------------------------------
 
                 val request =
                     CreateOrderRequest(
@@ -364,69 +285,66 @@ class CheckoutViewModel : ViewModel() {
                                 .deliveryAddress
                                 .trim(),
 
-                        latitude =
-                            latitude,
-
-                        longitude =
-                            longitude,
-
                         delivery_zone_id =
-                            zoneId,
-
-                        delivery_fee =
-                            delivery.deliveryFee,
+                            zone.id,
 
                         payment_option =
                             currentState
                                 .paymentOption,
 
                         notes =
-                            currentState
-                                .notes
+                            currentState.notes
                                 .trim()
                                 .ifBlank {
                                     null
                                 }
                     )
 
+                // -------------------------------------
+                // SEND TO LARAVEL
+                // -------------------------------------
+
                 val response =
-                    ApiClient.api.createOrder(
-                        request
-                    )
+                    api.createOrder(request)
 
                 if (
                     response.success &&
                     response.order != null
                 ) {
 
-                    val orderId =
-                        response.order.id
+                    val order =
+                        response.order
+
+                    val requiredPayment =
+                        if (
+                            currentState
+                                .paymentOption ==
+                            "full"
+                        ) {
+                            order.totalAmount
+                        } else {
+                            order.totalAmount * 0.50
+                        }
 
                     _state.value =
                         _state.value.copy(
-
-                            isSubmittingOrder =
-                                false,
-
-                            createdOrderId =
-                                orderId,
-
+                            isSubmittingOrder = false,
+                            createdOrderId = order.id,
                             successMessage =
-                                "Order created. Proceed to payment.",
-
-                            error = null
+                                response.message
+                                    ?: "Order created successfully."
                         )
 
-                    onSuccess(orderId)
+                    onSuccess(
+                        order.id,
+                        requiredPayment
+                    )
 
                 } else {
 
                     _state.value =
                         _state.value.copy(
-
-                            isSubmittingOrder =
-                                false,
-
+                            isSubmittingOrder = false,
                             error =
                                 response.message
                                     ?: "Unable to create order."
@@ -437,10 +355,7 @@ class CheckoutViewModel : ViewModel() {
 
                 _state.value =
                     _state.value.copy(
-
-                        isSubmittingOrder =
-                            false,
-
+                        isSubmittingOrder = false,
                         error =
                             e.message
                                 ?: "Unable to create order."
@@ -449,9 +364,10 @@ class CheckoutViewModel : ViewModel() {
         }
     }
 
-    // =====================================================
+
+    // =================================================
     // CONFIRM PAYMENT
-    // =====================================================
+    // =================================================
 
     fun confirmPayment(
         orderId: Int,
@@ -463,65 +379,51 @@ class CheckoutViewModel : ViewModel() {
 
         if (amountPaid <= 0) {
 
-            _state.value =
-                _state.value.copy(
-                    error =
-                        "Payment amount must be greater than zero."
-                )
+            _state.value = _state.value.copy(
+                error = "Payment amount must be greater than zero."
+            )
 
             return
         }
 
         if (paymentMethod.isBlank()) {
 
-            _state.value =
-                _state.value.copy(
-                    error =
-                        "Please select a payment method."
-                )
+            _state.value = _state.value.copy(
+                error = "Please select a payment method."
+            )
 
             return
         }
 
-        if (
-            transactionReference.isBlank()
-        ) {
+        if (transactionReference.isBlank()) {
 
-            _state.value =
-                _state.value.copy(
-                    error =
-                        "Payment transaction reference is required."
-                )
+            _state.value = _state.value.copy(
+                error =
+                    "Transaction reference is required."
+            )
 
             return
         }
 
         viewModelScope.launch {
 
-            _state.value =
-                _state.value.copy(
-                    isConfirmingPayment = true,
-                    error = null,
-                    successMessage = null
-                )
+            _state.value = _state.value.copy(
+                isConfirmingPayment = true,
+                error = null
+            )
 
             try {
 
                 val request =
                     ConfirmPaymentRequest(
-
-                        amount_paid =
-                            amountPaid,
-
-                        payment_method =
-                            paymentMethod.trim(),
-
+                        amount_paid = amountPaid,
+                        payment_method = paymentMethod,
                         transaction_reference =
                             transactionReference.trim()
                     )
 
                 val response =
-                    ApiClient.api.confirmPayment(
+                    api.confirmPayment(
                         id = orderId,
                         request = request
                     )
@@ -530,15 +432,10 @@ class CheckoutViewModel : ViewModel() {
 
                     _state.value =
                         _state.value.copy(
-
-                            isConfirmingPayment =
-                                false,
-
+                            isConfirmingPayment = false,
                             successMessage =
                                 response.message
-                                    ?: "Payment confirmed successfully.",
-
-                            error = null
+                                    ?: "Payment confirmed successfully."
                         )
 
                     onSuccess()
@@ -547,13 +444,10 @@ class CheckoutViewModel : ViewModel() {
 
                     _state.value =
                         _state.value.copy(
-
-                            isConfirmingPayment =
-                                false,
-
+                            isConfirmingPayment = false,
                             error =
                                 response.message
-                                    ?: "Payment could not be confirmed."
+                                    ?: "Payment confirmation failed."
                         )
                 }
 
@@ -561,39 +455,46 @@ class CheckoutViewModel : ViewModel() {
 
                 _state.value =
                     _state.value.copy(
-
-                        isConfirmingPayment =
-                            false,
-
+                        isConfirmingPayment = false,
                         error =
                             e.message
-                                ?: "Payment could not be confirmed."
+                                ?: "Payment confirmation failed."
                     )
             }
         }
     }
 
-    // =====================================================
+
+    // =================================================
     // CLEAR ERROR
-    // =====================================================
+    // =================================================
 
     fun clearError() {
 
-        _state.value =
-            _state.value.copy(
-                error = null
-            )
+        _state.value = _state.value.copy(
+            error = null
+        )
     }
 
-    // =====================================================
+
+    // =================================================
     // CLEAR SUCCESS
-    // =====================================================
+    // =================================================
 
     fun clearSuccess() {
 
-        _state.value =
-            _state.value.copy(
-                successMessage = null
-            )
+        _state.value = _state.value.copy(
+            successMessage = null
+        )
+    }
+
+
+    // =================================================
+    // RESET CHECKOUT
+    // =================================================
+
+    fun resetCheckout() {
+
+        _state.value = CheckoutState()
     }
 }

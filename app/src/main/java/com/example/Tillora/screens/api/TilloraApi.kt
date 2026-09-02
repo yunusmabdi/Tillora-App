@@ -2,6 +2,11 @@ package com.example.Tillora.api
 
 import com.example.Tillora.models.AuthResponse
 import com.example.Tillora.models.Category
+import com.example.Tillora.models.ConfirmPaymentRequest
+import com.example.Tillora.models.ConfirmPaymentResponse
+import com.example.Tillora.models.CreateOrderRequest
+import com.example.Tillora.models.CreateOrderResponse
+import com.example.Tillora.models.DeliveryZone
 import com.example.Tillora.models.LoginRequest
 import com.example.Tillora.models.MeResponse
 import com.example.Tillora.models.OrderResponse
@@ -14,12 +19,6 @@ import com.example.Tillora.models.SingleOrderResponse
 import com.example.Tillora.models.UpdateProfileRequest
 import com.example.Tillora.models.VerifyOtpRequest
 import com.example.Tillora.models.VerifyOtpResponse
-import com.example.Tillora.models.ConfirmPaymentRequest
-import com.example.Tillora.models.ConfirmPaymentResponse
-import com.example.Tillora.models.CreateOrderRequest
-import com.example.Tillora.models.CreateOrderResponse
-import com.example.Tillora.models.DeliveryCalculationRequest
-import com.example.Tillora.models.DeliveryCalculationResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -27,17 +26,30 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 
 
+// =====================================================
+// API RESPONSE MODELS
+// =====================================================
+
 data class ProductsResponse(
     val success: Boolean,
     val products: List<Product>
 )
-
 
 data class CategoriesResponse(
     val success: Boolean,
     val categories: List<Category>
 )
 
+data class DeliveryZonesResponse(
+    val success: Boolean,
+    val delivery_zones: List<DeliveryZone>,
+    val message: String? = null
+)
+
+
+// =====================================================
+// TILLORA API
+// =====================================================
 
 interface TilloraApi {
 
@@ -55,6 +67,22 @@ interface TilloraApi {
 
     @GET("api/categories")
     suspend fun getCategories(): CategoriesResponse
+
+
+    // =====================================================
+    // DELIVERY ZONES
+    // =====================================================
+
+    /**
+     * Returns all active delivery zones.
+     *
+     * Laravel determines the available zones and their
+     * fixed delivery fees.
+     *
+     * Android only allows the customer to select a zone.
+     */
+    @GET("api/delivery-zones")
+    suspend fun getDeliveryZones(): DeliveryZonesResponse
 
 
     // =====================================================
@@ -128,32 +156,29 @@ interface TilloraApi {
 
 
     // =====================================================
-    // DELIVERY CALCULATION
-    // =====================================================
-    //
-    // Customer coordinates are sent to Laravel.
-    //
-    // Laravel determines:
-    //
-    // Store
-    // Distance
-    // Delivery zone
-    // Delivery fee
-    // Whether delivery is possible
-    //
-    // The Android app does NOT calculate the zone.
-    // =====================================================
-
-    @POST("api/orders/calculate-delivery")
-    suspend fun calculateDelivery(
-        @Body request: DeliveryCalculationRequest
-    ): DeliveryCalculationResponse
-
-
-    // =====================================================
     // CHECKOUT
     // =====================================================
 
+    /**
+     * Creates a customer order.
+     *
+     * Android sends:
+     * - Cart items
+     * - Delivery address
+     * - Selected delivery zone
+     * - Payment option
+     * - Optional notes
+     *
+     * Laravel is responsible for:
+     * - Product prices
+     * - Stock validation
+     * - Subtotal
+     * - Tax
+     * - Delivery fee
+     * - Total
+     * - 50% advance calculation
+     * - Remaining balance
+     */
     @POST("api/orders")
     suspend fun createOrder(
         @Body request: CreateOrderRequest
@@ -164,6 +189,13 @@ interface TilloraApi {
     // PAYMENT
     // =====================================================
 
+    /**
+     * Confirms payment for an existing order.
+     *
+     * Supports:
+     * - M-Pesa
+     * - Card
+     */
     @POST("api/orders/{id}/payment")
     suspend fun confirmPayment(
         @Path("id") id: Int,
