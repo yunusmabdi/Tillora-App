@@ -318,7 +318,7 @@ fun HomeScreen(
 
                 // IMPORTANT:
                 // Bottom navigation padding + extra spacing
-                bottom = contentPadding.calculateBottomPadding() + 24.dp
+                bottom = contentPadding.calculateBottomPadding() + 100.dp
             ),
 
             horizontalArrangement = Arrangement.spacedBy(12.dp),

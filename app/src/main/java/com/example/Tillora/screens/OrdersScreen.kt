@@ -58,32 +58,77 @@ fun OrdersScreen(
         viewModel.loadOrders()
     }
 
+    // =====================================================
+    // FILTER ORDERS
+    // =====================================================
+
     val filteredOrders = when (selectedFilter) {
 
-        "Processing" ->
-            orders.filter {
-                it.fulfillmentStatus.equals(
-                    "processing",
+        /*
+         * Processing:
+         * Order Placed
+         * Processing
+         * Ready
+         */
+        "Processing" -> {
+            orders.filter { order ->
+                order.fulfillmentStatus.equals(
+                    "order placed",
+                    ignoreCase = true
+                ) ||
+                        order.fulfillmentStatus.equals(
+                            "processing",
+                            ignoreCase = true
+                        ) ||
+                        order.fulfillmentStatus.equals(
+                            "ready",
+                            ignoreCase = true
+                        )
+            }
+        }
+
+        /*
+         * Shipped:
+         * Out for Delivery
+         */
+        "Shipped" -> {
+            orders.filter { order ->
+                order.fulfillmentStatus.equals(
+                    "out for delivery",
                     ignoreCase = true
                 )
             }
+        }
 
-        "Shipped" ->
-            orders.filter {
-                it.fulfillmentStatus.equals(
-                    "shipped",
-                    ignoreCase = true
-                )
-            }
-
-        "Delivered" ->
-            orders.filter {
-                it.fulfillmentStatus.equals(
+        /*
+         * Delivered:
+         * Delivered
+         */
+        "Delivered" -> {
+            orders.filter { order ->
+                order.fulfillmentStatus.equals(
                     "delivered",
                     ignoreCase = true
                 )
             }
+        }
 
+        /*
+         * Cancelled:
+         * Cancelled
+         */
+        "Cancelled" -> {
+            orders.filter { order ->
+                order.fulfillmentStatus.equals(
+                    "cancelled",
+                    ignoreCase = true
+                )
+            }
+        }
+
+        /*
+         * All orders
+         */
         else -> orders
     }
 
@@ -92,6 +137,10 @@ fun OrdersScreen(
             .fillMaxSize()
             .background(TilloraBackground)
     ) {
+
+        // =================================================
+        // HEADER
+        // =================================================
 
         Column(
             modifier = Modifier
@@ -126,6 +175,10 @@ fun OrdersScreen(
             modifier = Modifier.height(20.dp)
         )
 
+        // =================================================
+        // ORDER FILTERS
+        // =================================================
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -133,17 +186,21 @@ fun OrdersScreen(
                     rememberScrollState()
                 )
                 .padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+
+            horizontalArrangement =
+                Arrangement.spacedBy(8.dp)
         ) {
 
             listOf(
                 "All",
                 "Processing",
                 "Shipped",
-                "Delivered"
+                "Delivered",
+                "Cancelled"
             ).forEach { filter ->
 
-                val isSelected = selectedFilter == filter
+                val isSelected =
+                    selectedFilter == filter
 
                 Text(
                     text = filter,
@@ -167,19 +224,22 @@ fun OrdersScreen(
                             vertical = 9.dp
                         ),
 
-                    color = if (isSelected) {
-                        Color.White
-                    } else {
-                        TilloraTextSecondary
-                    },
+                    color =
+                        if (isSelected) {
+                            Color.White
+                        } else {
+                            TilloraTextSecondary
+                        },
 
-                    fontWeight = if (isSelected) {
-                        FontWeight.SemiBold
-                    } else {
-                        FontWeight.Normal
-                    },
+                    fontWeight =
+                        if (isSelected) {
+                            FontWeight.SemiBold
+                        } else {
+                            FontWeight.Normal
+                        },
 
-                    style = MaterialTheme.typography.labelLarge
+                    style =
+                        MaterialTheme.typography.labelLarge
                 )
             }
         }
@@ -188,13 +248,22 @@ fun OrdersScreen(
             modifier = Modifier.height(18.dp)
         )
 
+        // =================================================
+        // CONTENT
+        // =================================================
+
         when {
+
+            // =================================================
+            // LOADING
+            // =================================================
 
             isLoading -> {
 
                 Column(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center
+                    verticalArrangement =
+                        Arrangement.Center
                 ) {
 
                     CircularProgressIndicator(
@@ -203,6 +272,10 @@ fun OrdersScreen(
                     )
                 }
             }
+
+            // =================================================
+            // ERROR
+            // =================================================
 
             error != null -> {
 
@@ -213,12 +286,26 @@ fun OrdersScreen(
                 ) {
 
                     Text(
-                        text = error ?: "Failed to load orders.",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
+                        text =
+                            error
+                                ?: "Failed to load orders.",
+
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .error,
+
+                        style =
+                            MaterialTheme
+                                .typography
+                                .bodyMedium
                     )
                 }
             }
+
+            // =================================================
+            // EMPTY
+            // =================================================
 
             filteredOrders.isEmpty() -> {
 
@@ -229,22 +316,41 @@ fun OrdersScreen(
                 ) {
 
                     Text(
-                        text = "No orders found.",
-                        color = TilloraTextSecondary,
-                        style = MaterialTheme.typography.bodyMedium
+                        text =
+                            if (selectedFilter == "All") {
+                                "No orders found."
+                            } else {
+                                "No $selectedFilter orders found."
+                            },
+
+                        color =
+                            TilloraTextSecondary,
+
+                        style =
+                            MaterialTheme
+                                .typography
+                                .bodyMedium
                     )
                 }
             }
 
+            // =================================================
+            // ORDERS
+            // =================================================
+
             else -> {
 
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
 
                     contentPadding = PaddingValues(
                         start = 20.dp,
                         end = 20.dp,
-                        bottom = 20.dp
+
+                        // Space above bottom navigation
+                        bottom = 100.dp
                     ),
 
                     verticalArrangement =
@@ -258,6 +364,7 @@ fun OrdersScreen(
 
                         OrderCard(
                             order = order,
+
                             onClick = {
                                 onOrderClick(order)
                             }

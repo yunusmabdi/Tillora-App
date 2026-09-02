@@ -9,8 +9,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
 
-    private const val BASE_URL = "http://192.168.1.32:8000/"
-
+    private const val BASE_URL =
+        "https://speller-shrank-unelected.ngrok-free.dev/"
     private var retrofit: Retrofit? = null
 
     fun initialize(context: Context) {
